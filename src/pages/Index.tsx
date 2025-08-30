@@ -6,8 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Filter, Search, Sparkles } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 const Index = () => {
+  const navigate = useNavigate();
   const recentTemplates = [
     {
       title: "Patient Risk Assessment Quiz",
@@ -71,7 +74,10 @@ const Index = () => {
                   Here's what's happening with your interactive content today.
                 </p>
               </div>
-              <Button className="bg-gradient-primary hover:opacity-90 shadow-glow">
+              <Button 
+                className="bg-gradient-primary hover:opacity-90 shadow-glow"
+                onClick={() => navigate("/quiz-builder")}
+              >
                 <Sparkles className="w-4 h-4 mr-2" />
                 Create New Content
               </Button>
@@ -135,15 +141,24 @@ const Index = () => {
                   <CardTitle className="text-white">Quick Start</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <Button className="w-full bg-white/20 hover:bg-white/30 text-white border-0">
+                  <Button 
+                    className="w-full bg-white/20 hover:bg-white/30 text-white border-0"
+                    onClick={() => navigate("/quiz-builder")}
+                  >
                     <Plus className="w-4 h-4 mr-2" />
                     Create Patient Quiz
                   </Button>
-                  <Button className="w-full bg-white/20 hover:bg-white/30 text-white border-0">
+                  <Button 
+                    className="w-full bg-white/20 hover:bg-white/30 text-white border-0"
+                    onClick={() => navigate("/calculator-builder")}
+                  >
                     <Plus className="w-4 h-4 mr-2" />
                     Build Calculator
                   </Button>
-                  <Button className="w-full bg-white/20 hover:bg-white/30 text-white border-0">
+                  <Button 
+                    className="w-full bg-white/20 hover:bg-white/30 text-white border-0"
+                    onClick={() => navigate("/chatbot-builder")}
+                  >
                     <Plus className="w-4 h-4 mr-2" />
                     Setup Chatbot
                   </Button>

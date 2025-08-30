@@ -5,6 +5,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import { QuizBuilder } from "./pages/QuizBuilder";
+import { CalculatorBuilder } from "./pages/CalculatorBuilder";
+import { ChatbotBuilder } from "./pages/ChatbotBuilder";
 
 const queryClient = new QueryClient();
 
@@ -16,6 +19,9 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/quiz-builder" element={<QuizBuilder />} />
+          <Route path="/calculator-builder" element={<CalculatorBuilder />} />
+          <Route path="/chatbot-builder" element={<ChatbotBuilder />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
