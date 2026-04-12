@@ -346,6 +346,7 @@ export const QuizBuilder = () => {
               </Card>
             </div>
           </div>
+          )}
         </main>
       </div>
     </div>
