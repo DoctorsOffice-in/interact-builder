@@ -158,6 +158,14 @@ export const QuizBuilder = () => {
             </div>
           </div>
 
+          {showPreview ? (
+            <QuizPreview
+              title={quizSettings.title}
+              description={quizSettings.description}
+              questions={questions}
+              onClose={() => setShowPreview(false)}
+            />
+          ) : (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             {/* Sidebar */}
             <div className="lg:col-span-1">
