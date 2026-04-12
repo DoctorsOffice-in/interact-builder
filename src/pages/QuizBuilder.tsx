@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
+import { QuizPreview } from "@/components/QuizPreview";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -39,7 +40,7 @@ interface QuizSettings {
 export const QuizBuilder = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"questions" | "design" | "settings">("questions");
-  
+  const [showPreview, setShowPreview] = useState(false);
   const [quizSettings, setQuizSettings] = useState<QuizSettings>({
     title: "Patient Engagement Quiz",
     description: "Help patients understand their health needs and connect with your practice",
@@ -108,7 +109,7 @@ export const QuizBuilder = () => {
   };
 
   const handlePreview = () => {
-    toast.info("Opening preview in new window...");
+    setShowPreview(true);
   };
 
   const doctorTemplates = [
@@ -157,6 +158,14 @@ export const QuizBuilder = () => {
             </div>
           </div>
 
+          {showPreview ? (
+            <QuizPreview
+              title={quizSettings.title}
+              description={quizSettings.description}
+              questions={questions}
+              onClose={() => setShowPreview(false)}
+            />
+          ) : (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             {/* Sidebar */}
             <div className="lg:col-span-1">
@@ -337,6 +346,7 @@ export const QuizBuilder = () => {
               </Card>
             </div>
           </div>
+          )}
         </main>
       </div>
     </div>
