@@ -40,7 +40,7 @@ interface QuizSettings {
 export const QuizBuilder = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"questions" | "design" | "settings">("questions");
-  
+  const [showPreview, setShowPreview] = useState(false);
   const [quizSettings, setQuizSettings] = useState<QuizSettings>({
     title: "Patient Engagement Quiz",
     description: "Help patients understand their health needs and connect with your practice",
@@ -109,7 +109,7 @@ export const QuizBuilder = () => {
   };
 
   const handlePreview = () => {
-    toast.info("Opening preview in new window...");
+    setShowPreview(true);
   };
 
   const doctorTemplates = [
