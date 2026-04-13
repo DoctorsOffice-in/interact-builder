@@ -10,7 +10,8 @@ import {
   Settings,
   Zap,
   Heart,
-  TrendingUp
+  TrendingUp,
+  RotateCw
 } from "lucide-react";
 
 export const Sidebar = () => {
@@ -29,7 +30,7 @@ export const Sidebar = () => {
   const quickActions = [
     { icon: Zap, label: "Quiz Builder", color: "text-primary", path: "/quiz-builder" },
     { icon: Calculator, label: "Calculator", color: "text-secondary", path: "/calculator-builder" },
-    { icon: Heart, label: "Assessment", color: "text-success", path: "/quiz-builder" },
+    { icon: RotateCw, label: "Spin Wheel", color: "text-success", path: "/spin-wheel-builder" },
     { icon: TrendingUp, label: "Survey", color: "text-warning", path: "/quiz-builder" },
   ];
 
