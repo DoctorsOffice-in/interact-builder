@@ -12,10 +12,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Plus, Save, Eye, ArrowLeft, Settings, Palette, Trophy, GripVertical
+  Plus, Save, Eye, ArrowLeft, Settings, Palette, Trophy, GripVertical, Code2
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { EmbedCodeDialog } from "@/components/EmbedCodeDialog";
 import {
   DndContext,
   closestCenter,
@@ -72,6 +73,7 @@ export const QuizBuilder = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"questions" | "results" | "design" | "settings">("questions");
   const [showPreview, setShowPreview] = useState(false);
+  const [showEmbed, setShowEmbed] = useState(false);
   const [quizSettings, setQuizSettings] = useState<QuizSettings>({
     title: "Patient Engagement Quiz",
     description: "Help patients understand their health needs and connect with your practice",
@@ -254,12 +256,23 @@ export const QuizBuilder = () => {
                 <Eye className="w-4 h-4 mr-2" />
                 Preview
               </Button>
+              <Button variant="outline" onClick={() => setShowEmbed(true)}>
+                <Code2 className="w-4 h-4 mr-2" />
+                Embed
+              </Button>
               <Button onClick={() => toast.success("Quiz saved!")} className="bg-gradient-primary hover:opacity-90">
                 <Save className="w-4 h-4 mr-2" />
                 Save Quiz
               </Button>
             </div>
           </div>
+
+          <EmbedCodeDialog
+            open={showEmbed}
+            onOpenChange={setShowEmbed}
+            contentType="quiz"
+            contentTitle={quizSettings.title}
+          />
 
           {showPreview ? (
             <QuizPreview

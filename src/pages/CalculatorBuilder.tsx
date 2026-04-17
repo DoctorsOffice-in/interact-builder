@@ -207,12 +207,23 @@ export const CalculatorBuilder = () => {
                 <Eye className="w-4 h-4 mr-2" />
                 {showPreview ? "Edit Mode" : "Preview"}
               </Button>
+              <Button variant="outline" onClick={() => setShowEmbed(true)}>
+                <Code2 className="w-4 h-4 mr-2" />
+                Embed
+              </Button>
               <Button className="bg-gradient-primary hover:opacity-90" onClick={() => toast.success("Calculator saved!")}>
                 <Save className="w-4 h-4 mr-2" />
                 Save Calculator
               </Button>
             </div>
           </div>
+
+          <EmbedCodeDialog
+            open={showEmbed}
+            onOpenChange={setShowEmbed}
+            contentType="calculator"
+            contentTitle={activeTemplate}
+          />
 
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             <div className="lg:col-span-1">
