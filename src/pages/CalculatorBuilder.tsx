@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, Eye, Calculator, Plus, Trash2, GripVertical } from "lucide-react";
+import { ArrowLeft, Save, Eye, Calculator, Plus, Trash2, GripVertical, Code2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { EmbedCodeDialog } from "@/components/EmbedCodeDialog";
 
 interface CalcField {
   id: string;
@@ -171,6 +172,7 @@ export const CalculatorBuilder = () => {
     return initial;
   });
   const [showPreview, setShowPreview] = useState(false);
+  const [showEmbed, setShowEmbed] = useState(false);
 
   const currentTemplate = templates[activeTemplate];
 
@@ -207,12 +209,23 @@ export const CalculatorBuilder = () => {
                 <Eye className="w-4 h-4 mr-2" />
                 {showPreview ? "Edit Mode" : "Preview"}
               </Button>
+              <Button variant="outline" onClick={() => setShowEmbed(true)}>
+                <Code2 className="w-4 h-4 mr-2" />
+                Embed
+              </Button>
               <Button className="bg-gradient-primary hover:opacity-90" onClick={() => toast.success("Calculator saved!")}>
                 <Save className="w-4 h-4 mr-2" />
                 Save Calculator
               </Button>
             </div>
           </div>
+
+          <EmbedCodeDialog
+            open={showEmbed}
+            onOpenChange={setShowEmbed}
+            contentType="calculator"
+            contentTitle={activeTemplate}
+          />
 
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             <div className="lg:col-span-1">
