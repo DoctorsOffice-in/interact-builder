@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, Eye, Calculator, Plus, Trash2, GripVertical } from "lucide-react";
+import { ArrowLeft, Save, Eye, Calculator, Plus, Trash2, GripVertical, Code2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { EmbedCodeDialog } from "@/components/EmbedCodeDialog";
 
 interface CalcField {
   id: string;
@@ -171,6 +172,7 @@ export const CalculatorBuilder = () => {
     return initial;
   });
   const [showPreview, setShowPreview] = useState(false);
+  const [showEmbed, setShowEmbed] = useState(false);
 
   const currentTemplate = templates[activeTemplate];
 

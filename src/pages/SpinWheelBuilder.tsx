@@ -7,9 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, Eye, Plus, Trash2, Palette } from "lucide-react";
+import { ArrowLeft, Save, Eye, Plus, Trash2, Palette, Code2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { EmbedCodeDialog } from "@/components/EmbedCodeDialog";
 
 interface WheelSegment {
   id: string;
@@ -55,6 +56,7 @@ const presetTemplates: Record<string, WheelSegment[]> = {
 export const SpinWheelBuilder = () => {
   const navigate = useNavigate();
   const [showPreview, setShowPreview] = useState(false);
+  const [showEmbed, setShowEmbed] = useState(false);
   const [wheelTitle, setWheelTitle] = useState("Spin to Win a Special Offer!");
   const [segments, setSegments] = useState<WheelSegment[]>(presetTemplates["Dental Clinic Offers"]);
 
@@ -108,12 +110,23 @@ export const SpinWheelBuilder = () => {
                 <Eye className="w-4 h-4 mr-2" />
                 {showPreview ? "Edit" : "Preview"}
               </Button>
+              <Button variant="outline" onClick={() => setShowEmbed(true)}>
+                <Code2 className="w-4 h-4 mr-2" />
+                Embed
+              </Button>
               <Button className="bg-gradient-primary hover:opacity-90" onClick={() => toast.success("Wheel saved!")}>
                 <Save className="w-4 h-4 mr-2" />
                 Save Wheel
               </Button>
             </div>
           </div>
+
+          <EmbedCodeDialog
+            open={showEmbed}
+            onOpenChange={setShowEmbed}
+            contentType="spin-wheel"
+            contentTitle={wheelTitle}
+          />
 
           {showPreview ? (
             <Card className="bg-gradient-card border-border max-w-xl mx-auto">
