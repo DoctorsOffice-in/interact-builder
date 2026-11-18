@@ -9,6 +9,7 @@ import { QuizBuilder } from "./pages/QuizBuilder";
 import { CalculatorBuilder } from "./pages/CalculatorBuilder";
 import { ChatbotBuilder } from "./pages/ChatbotBuilder";
 import { SpinWheelBuilder } from "./pages/SpinWheelBuilder";
+import { PublicQuiz } from "./pages/PublicQuiz";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/calculator-builder" element={<CalculatorBuilder />} />
           <Route path="/chatbot-builder" element={<ChatbotBuilder />} />
           <Route path="/spin-wheel-builder" element={<SpinWheelBuilder />} />
+          <Route path="/p/:slug" element={<PublicQuiz />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

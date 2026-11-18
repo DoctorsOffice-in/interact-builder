@@ -14,13 +14,111 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      content_items: {
+        Row: {
+          content: Json
+          content_type: string
+          created_at: string
+          id: string
+          is_published: boolean
+          owner_id: string
+          slug: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content?: Json
+          content_type: string
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          owner_id?: string
+          slug: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: Json
+          content_type?: string
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          owner_id?: string
+          slug?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      leads: {
+        Row: {
+          consented_at: string
+          content_item_id: string
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          owner_id: string
+          phone: string | null
+          responses: Json
+          result_title: string | null
+          score: number | null
+        }
+        Insert: {
+          consented_at?: string
+          content_item_id: string
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          owner_id: string
+          phone?: string | null
+          responses?: Json
+          result_title?: string | null
+          score?: number | null
+        }
+        Update: {
+          consented_at?: string
+          content_item_id?: string
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          owner_id?: string
+          phone?: string | null
+          responses?: Json
+          result_title?: string | null
+          score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_content_item_id_fkey"
+            columns: ["content_item_id"]
+            isOneToOne: false
+            referencedRelation: "content_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_published_quiz: { Args: { p_slug: string }; Returns: Json }
+      submit_quiz_lead: {
+        Args: {
+          p_consent: boolean
+          p_email: string
+          p_full_name: string
+          p_phone: string
+          p_responses: Json
+          p_result_title: string
+          p_score: number
+          p_slug: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
