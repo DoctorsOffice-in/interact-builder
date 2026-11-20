@@ -8,6 +8,13 @@
       "when": 1794987485345,
       "tag": "0000_create_content_library_and_private_leads",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1795140298650,
+      "tag": "0001_create_doctor_profiles",
+      "breakpoints": true
     }
   ]
 }
