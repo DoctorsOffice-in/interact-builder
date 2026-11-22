@@ -1,25 +1,26 @@
-import { describe, it } from "node:test";
-import assert from "node:assert/strict";
+declare function describe(name: string, run: () => void): void;
+declare function it(name: string, run: () => void): void;
+declare function expect<T>(actual: T): { toBe(expected: unknown): void };
 import { contentInputSchema, leadInputSchema } from "./content-validation";
 
 describe("content library validation", () => {
   it("accepts saved quizzes", () => {
-    assert.equal(contentInputSchema.safeParse({ contentType: "quiz", title: "Patient quiz", content: {} }).success, true);
+    expect(contentInputSchema.safeParse({ contentType: "quiz", title: "Patient quiz", content: {} }).success).toBe(true);
   });
 
   it("accepts saved calculators", () => {
-    assert.equal(contentInputSchema.safeParse({ contentType: "calculator", title: "BMI", content: {} }).success, true);
+    expect(contentInputSchema.safeParse({ contentType: "calculator", title: "BMI", content: {} }).success).toBe(true);
   });
 
   it("accepts saved chatbots", () => {
-    assert.equal(contentInputSchema.safeParse({ contentType: "chatbot", title: "Clinic bot", content: {} }).success, true);
+    expect(contentInputSchema.safeParse({ contentType: "chatbot", title: "Clinic bot", content: {} }).success).toBe(true);
   });
 
   it("accepts saved spin wheels", () => {
-    assert.equal(contentInputSchema.safeParse({ contentType: "spin-wheel", title: "Clinic offers", content: {} }).success, true);
+    expect(contentInputSchema.safeParse({ contentType: "spin-wheel", title: "Clinic offers", content: {} }).success).toBe(true);
   });
 
   it("requires visitor consent before a lead is submitted", () => {
-    assert.equal(leadInputSchema.safeParse({ fullName: "Pat Lee", email: "pat@example.com", phone: "", consent: false }).success, false);
+    expect(leadInputSchema.safeParse({ fullName: "Pat Lee", email: "pat@example.com", phone: "", consent: false }).success).toBe(false);
   });
 });
