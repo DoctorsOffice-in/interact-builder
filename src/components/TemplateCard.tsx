@@ -1,43 +1,37 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  MoreVertical, 
-  Eye, 
-  Edit3, 
-  Copy, 
-  Trash2, 
-  ExternalLink,
-  TrendingUp
-} from "lucide-react";
+import { MoreVertical, Eye, Edit3, Copy, Trash2, ExternalLink } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { toast } from "sonner";
 
 interface TemplateCardProps {
   title: string;
   description: string;
   category: string;
-  views?: number;
-  conversions?: number;
-  image?: string;
+  updatedAt?: string;
   status?: "published" | "draft" | "archived";
   onEdit?: () => void;
   onPreview?: () => void;
+  onDuplicate?: () => void;
+  onDelete?: () => void;
+  onViewLive?: () => void;
 }
 
 export const TemplateCard = ({ 
   title, 
   description, 
   category, 
-  views = 0, 
-  conversions = 0, 
   status = "draft",
   onEdit,
-  onPreview 
+  onPreview,
+  onDuplicate,
+  onDelete,
+  onViewLive,
+  updatedAt,
 }: TemplateCardProps) => {
   const statusColors = {
     published: "bg-success text-success-foreground",
@@ -69,13 +63,13 @@ export const TemplateCard = ({
             <DropdownMenuItem onClick={onEdit}>
               <Edit3 className="w-4 h-4 mr-2" />Edit
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => toast.success(`Duplicated "${title}"`)}>
+            <DropdownMenuItem onClick={onDuplicate}>
               <Copy className="w-4 h-4 mr-2" />Duplicate
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => toast.info("Opening live view...")}>
+            <DropdownMenuItem onClick={onViewLive} disabled={!onViewLive}>
               <ExternalLink className="w-4 h-4 mr-2" />View Live
             </DropdownMenuItem>
-            <DropdownMenuItem className="text-destructive" onClick={() => toast.success(`Deleted "${title}"`)}>
+            <DropdownMenuItem className="text-destructive" onClick={onDelete}>
               <Trash2 className="w-4 h-4 mr-2" />Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -84,18 +78,7 @@ export const TemplateCard = ({
 
       <p className="text-muted-foreground text-sm mb-4 line-clamp-2">{description}</p>
 
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <Eye className="w-4 h-4" />
-            <span>{views.toLocaleString()} views</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <TrendingUp className="w-4 h-4" />
-            <span>{conversions}% conversion</span>
-          </div>
-        </div>
-      </div>
+      {updatedAt && <p className="mb-4 text-xs text-muted-foreground">Last saved {new Date(updatedAt).toLocaleDateString()}</p>}
 
       <div className="flex gap-2">
         <Button variant="outline" size="sm" className="flex-1" onClick={onPreview}>

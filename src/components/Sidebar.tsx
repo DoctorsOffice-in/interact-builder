@@ -20,11 +20,11 @@ export const Sidebar = () => {
 
   const menuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-    { icon: FileText, label: "My Content", path: "/", count: 12 },
-    { icon: Calculator, label: "Calculators", path: "/calculator-builder", count: 5 },
-    { icon: MessageSquare, label: "Chatbots", path: "/chatbot-builder", count: 3 },
-    { icon: BarChart3, label: "Analytics", path: "/" },
-    { icon: Users, label: "Leads", path: "/", count: 247 },
+    { icon: FileText, label: "My Content", path: "/" },
+    { icon: Calculator, label: "Calculators", path: "/calculator-builder" },
+    { icon: MessageSquare, label: "Chatbots", path: "/chatbot-builder" },
+    { icon: BarChart3, label: "Analytics", path: "/leads" },
+    { icon: Users, label: "Leads", path: "/leads" },
   ];
 
   const quickActions = [
@@ -56,15 +56,6 @@ export const Sidebar = () => {
               >
                 <item.icon className="w-4 h-4 mr-3" />
                 <span className="flex-1 text-left">{item.label}</span>
-                {item.count && (
-                  <span className={`text-xs px-2 py-1 rounded-full ${
-                    isActive 
-                      ? "bg-white/20 text-white" 
-                      : "bg-muted text-muted-foreground"
-                  }`}>
-                    {item.count}
-                  </span>
-                )}
               </Button>
             );
           })}

@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
 import { QuizPreview } from "@/components/QuizPreview";
@@ -14,9 +14,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Plus, Save, Eye, ArrowLeft, Settings, Palette, Trophy, GripVertical, Code2
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { EmbedCodeDialog } from "@/components/EmbedCodeDialog";
+import { getContentItem, saveContentItem } from "@/lib/content-storage";
 import {
   DndContext,
   closestCenter,
@@ -71,9 +72,15 @@ interface QuizSettings {
 
 export const QuizBuilder = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<"questions" | "results" | "design" | "settings">("questions");
   const [showPreview, setShowPreview] = useState(false);
   const [showEmbed, setShowEmbed] = useState(false);
+  const [savedItemId, setSavedItemId] = useState<string | undefined>(undefined);
+  const [savedSlug, setSavedSlug] = useState<string | undefined>(undefined);
+  const [isPublished, setIsPublished] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [loadingExisting, setLoadingExisting] = useState(Boolean(searchParams.get("id")));
   const [quizSettings, setQuizSettings] = useState<QuizSettings>({
     title: "Patient Engagement Quiz",
     description: "Help patients understand their health needs and connect with your practice",
@@ -105,6 +112,60 @@ export const QuizBuilder = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingForQuestion, setUploadingForQuestion] = useState<string | null>(null);
+
+  useEffect(() => {
+    const id = searchParams.get("id");
+    if (!id) {
+      setLoadingExisting(false);
+      return;
+    }
+    let active = true;
+    setLoadingExisting(true);
+    void getContentItem(id).then((item) => {
+      if (!active) return;
+      if (!item || item.content_type !== "quiz") {
+        toast.error("That saved quiz could not be found.");
+        setLoadingExisting(false);
+        return;
+      }
+      const content = item.content as unknown as { settings?: Partial<QuizSettings>; questions?: QuizQuestion[]; results?: QuizResult[] };
+      setQuizSettings((current) => ({ ...current, ...content.settings, title: content.settings?.title || item.title }));
+      setQuestions(content.questions ?? []);
+      setResults(content.results ?? []);
+      setSavedItemId(item.id);
+      setSavedSlug(item.slug);
+      setIsPublished(item.is_published);
+      setLoadingExisting(false);
+    }).catch((error: unknown) => {
+      if (active) {
+        toast.error(error instanceof Error ? error.message : "Could not load this quiz.");
+        setLoadingExisting(false);
+      }
+    });
+    return () => { active = false; };
+  }, [searchParams]);
+
+  const saveQuiz = async (publish: boolean) => {
+    setSaving(true);
+    try {
+      const item = await saveContentItem({
+        id: savedItemId,
+        contentType: "quiz",
+        title: quizSettings.title,
+        content: { settings: quizSettings, questions, results },
+        publish,
+      });
+      setSavedItemId(item.id);
+      setSavedSlug(item.slug);
+      setIsPublished(item.is_published);
+      if (!savedItemId) setSearchParams({ id: item.id }, { replace: true });
+      toast.success(publish ? "Quiz published and ready to share." : "Quiz saved as a draft.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Quiz could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -256,14 +317,18 @@ export const QuizBuilder = () => {
                 <Eye className="w-4 h-4 mr-2" />
                 Preview
               </Button>
-              <Button variant="outline" onClick={() => setShowEmbed(true)}>
+              <Button variant="outline" onClick={() => setShowEmbed(true)} disabled={!isPublished || !savedSlug}>
                 <Code2 className="w-4 h-4 mr-2" />
-                Embed
+                Share
               </Button>
-              <Button onClick={() => toast.success("Quiz saved!")} className="bg-gradient-primary hover:opacity-90">
+              <Button onClick={() => void saveQuiz(isPublished)} className="bg-gradient-primary hover:opacity-90" disabled={saving || loadingExisting}>
                 <Save className="w-4 h-4 mr-2" />
-                Save Quiz
+                {saving ? "Saving…" : isPublished ? "Save Changes" : "Save Draft"}
               </Button>
+              {!isPublished && <Button onClick={() => void saveQuiz(true)} disabled={saving || loadingExisting}>
+                {saving ? "Publishing…" : "Publish Quiz"}
+              </Button>
+              }
             </div>
           </div>
 
@@ -272,6 +337,7 @@ export const QuizBuilder = () => {
             onOpenChange={setShowEmbed}
             contentType="quiz"
             contentTitle={quizSettings.title}
+            contentId={savedSlug}
           />
 
           {showPreview ? (

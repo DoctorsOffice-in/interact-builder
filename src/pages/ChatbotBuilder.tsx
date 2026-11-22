@@ -8,8 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Save, Eye, Bot, MessageSquare, Plus, Trash2, Send, User } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
+import { getContentItem, saveContentItem } from "@/lib/content-storage";
 
 interface BotNode {
   id: string;
@@ -292,13 +293,47 @@ const botTemplates: Record<string, BotTemplate> = {
 
 export const ChatbotBuilder = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTemplate, setActiveTemplate] = useState("Appointment Scheduling Bot");
   const [nodes, setNodes] = useState<BotNode[]>(botTemplates["Appointment Scheduling Bot"].nodes);
   const [greeting, setGreeting] = useState(botTemplates["Appointment Scheduling Bot"].greeting);
   const [showPreview, setShowPreview] = useState(false);
+  const [savedItemId, setSavedItemId] = useState<string | undefined>(undefined);
+  const [saving, setSaving] = useState(false);
+  const [loadingExisting, setLoadingExisting] = useState(Boolean(searchParams.get("id")));
   const [chatHistory, setChatHistory] = useState<{ sender: "bot" | "user"; text: string }[]>([]);
   const [currentNodeId, setCurrentNodeId] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const id = searchParams.get("id");
+    if (!id) {
+      setLoadingExisting(false);
+      return;
+    }
+    let active = true;
+    setLoadingExisting(true);
+    void getContentItem(id).then((item) => {
+      if (!active) return;
+      if (!item || item.content_type !== "chatbot") {
+        toast.error("That saved chatbot could not be found.");
+        setLoadingExisting(false);
+        return;
+      }
+      const content = item.content as unknown as { greeting?: string; nodes?: BotNode[] };
+      setActiveTemplate(item.title);
+      setGreeting(content.greeting ?? "");
+      setNodes(content.nodes ?? []);
+      setSavedItemId(item.id);
+      setLoadingExisting(false);
+    }).catch((error: unknown) => {
+      if (active) {
+        toast.error(error instanceof Error ? error.message : "Could not load this chatbot.");
+        setLoadingExisting(false);
+      }
+    });
+    return () => { active = false; };
+  }, [searchParams]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -352,6 +387,25 @@ export const ChatbotBuilder = () => {
 
   const currentNode = nodes.find((n) => n.id === currentNodeId);
 
+  const saveChatbot = async () => {
+    setSaving(true);
+    try {
+      const item = await saveContentItem({
+        id: savedItemId,
+        contentType: "chatbot",
+        title: activeTemplate,
+        content: { greeting, nodes },
+      });
+      setSavedItemId(item.id);
+      if (!savedItemId) setSearchParams({ id: item.id }, { replace: true });
+      toast.success("Chatbot saved to your content.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Chatbot could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-background">
       <Header />
@@ -374,9 +428,9 @@ export const ChatbotBuilder = () => {
                 <Eye className="w-4 h-4 mr-2" />
                 {showPreview ? "Edit Mode" : "Preview"}
               </Button>
-              <Button className="bg-gradient-primary hover:opacity-90" onClick={() => toast.success("Chatbot saved!")}>
+              <Button className="bg-gradient-primary hover:opacity-90" onClick={() => void saveChatbot()} disabled={saving || loadingExisting}>
                 <Save className="w-4 h-4 mr-2" />
-                Save Chatbot
+                {saving ? "Saving…" : "Save Chatbot"}
               </Button>
             </div>
           </div>

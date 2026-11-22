@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
 import { SpinWheel } from "@/components/SpinWheel";
@@ -8,9 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Save, Eye, Plus, Trash2, Palette, Code2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { EmbedCodeDialog } from "@/components/EmbedCodeDialog";
+import { getContentItem, saveContentItem } from "@/lib/content-storage";
 
 interface WheelSegment {
   id: string;
@@ -55,10 +56,43 @@ const presetTemplates: Record<string, WheelSegment[]> = {
 
 export const SpinWheelBuilder = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showPreview, setShowPreview] = useState(false);
   const [showEmbed, setShowEmbed] = useState(false);
+  const [savedItemId, setSavedItemId] = useState<string | undefined>(undefined);
+  const [saving, setSaving] = useState(false);
+  const [loadingExisting, setLoadingExisting] = useState(Boolean(searchParams.get("id")));
   const [wheelTitle, setWheelTitle] = useState("Spin to Win a Special Offer!");
   const [segments, setSegments] = useState<WheelSegment[]>(presetTemplates["Dental Clinic Offers"]);
+
+  useEffect(() => {
+    const id = searchParams.get("id");
+    if (!id) {
+      setLoadingExisting(false);
+      return;
+    }
+    let active = true;
+    setLoadingExisting(true);
+    void getContentItem(id).then((item) => {
+      if (!active) return;
+      if (!item || item.content_type !== "spin-wheel") {
+        toast.error("That saved wheel could not be found.");
+        setLoadingExisting(false);
+        return;
+      }
+      const content = item.content as unknown as { title?: string; segments?: WheelSegment[] };
+      setWheelTitle(content.title ?? item.title);
+      setSegments(content.segments?.length ? content.segments : presetTemplates["Dental Clinic Offers"]);
+      setSavedItemId(item.id);
+      setLoadingExisting(false);
+    }).catch((error: unknown) => {
+      if (active) {
+        toast.error(error instanceof Error ? error.message : "Could not load this wheel.");
+        setLoadingExisting(false);
+      }
+    });
+    return () => { active = false; };
+  }, [searchParams]);
 
   const addSegment = () => {
     const newSeg: WheelSegment = {
@@ -88,6 +122,25 @@ export const SpinWheelBuilder = () => {
     toast.success(`Loaded "${name}" template`);
   };
 
+  const saveWheel = async () => {
+    setSaving(true);
+    try {
+      const item = await saveContentItem({
+        id: savedItemId,
+        contentType: "spin-wheel",
+        title: wheelTitle,
+        content: { title: wheelTitle, segments },
+      });
+      setSavedItemId(item.id);
+      if (!savedItemId) setSearchParams({ id: item.id }, { replace: true });
+      toast.success("Spin wheel saved to your content.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Spin wheel could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-background">
       <Header />
@@ -114,9 +167,9 @@ export const SpinWheelBuilder = () => {
                 <Code2 className="w-4 h-4 mr-2" />
                 Embed
               </Button>
-              <Button className="bg-gradient-primary hover:opacity-90" onClick={() => toast.success("Wheel saved!")}>
+              <Button className="bg-gradient-primary hover:opacity-90" onClick={() => void saveWheel()} disabled={saving || loadingExisting}>
                 <Save className="w-4 h-4 mr-2" />
-                Save Wheel
+                {saving ? "Saving…" : "Save Wheel"}
               </Button>
             </div>
           </div>

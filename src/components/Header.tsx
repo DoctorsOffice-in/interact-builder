@@ -1,5 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -9,6 +11,15 @@ import {
 import { Bell, Search, Plus, Settings, LogOut, User } from "lucide-react";
 
 export const Header = () => {
+  const navigate = useNavigate();
+  const { user, profile, signOut } = useAuth();
+  const initials = (profile?.display_name || user?.email || "Doctor")
+    .split(/[\s@.]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+
   return (
     <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
       <div className="flex h-16 items-center justify-between px-6">
@@ -24,13 +35,13 @@ export const Header = () => {
           </div>
           
           <nav className="hidden md:flex items-center space-x-6">
-            <Button variant="ghost" className="text-muted-foreground hover:text-primary">
+            <Button variant="ghost" className="text-muted-foreground hover:text-primary" onClick={() => navigate("/")}>
               Dashboard
             </Button>
-            <Button variant="ghost" className="text-muted-foreground hover:text-primary">
+            <Button variant="ghost" className="text-muted-foreground hover:text-primary" onClick={() => navigate("/quiz-builder")}>
               Templates
             </Button>
-            <Button variant="ghost" className="text-muted-foreground hover:text-primary">
+            <Button variant="ghost" className="text-muted-foreground hover:text-primary" onClick={() => navigate("/leads")}>
               Analytics
             </Button>
           </nav>
@@ -49,17 +60,14 @@ export const Header = () => {
           </div>
 
           {/* Create Button */}
-          <Button className="bg-gradient-primary hover:opacity-90 shadow-glow transition-all">
+          <Button className="bg-gradient-primary hover:opacity-90 shadow-glow transition-all" onClick={() => navigate("/quiz-builder")}>
             <Plus className="w-4 h-4 mr-2" />
             Create
           </Button>
 
           {/* Notifications */}
-          <Button variant="ghost" size="icon" className="relative">
+          <Button variant="ghost" size="icon" className="relative" aria-label="Notifications" disabled title="No new notifications">
             <Bell className="w-4 h-4" />
-            <span className="absolute -top-1 -right-1 w-3 h-3 bg-warning rounded-full flex items-center justify-center">
-              <span className="text-xs text-white">2</span>
-            </span>
           </Button>
 
           {/* User Menu */}
@@ -67,23 +75,25 @@ export const Header = () => {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                 <Avatar className="h-9 w-9">
-                  <AvatarImage src="/placeholder-avatar.jpg" alt="User" />
+                  {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={profile.display_name || "Doctor"} />}
                   <AvatarFallback className="bg-gradient-primary text-white">
-                    JD
+                    {initials}
                   </AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end" forceMount>
-              <DropdownMenuItem className="flex items-center">
+              <DropdownMenuItem className="flex items-center" onSelect={() => navigate("/profile")}>
                 <User className="mr-2 h-4 w-4" />
                 <span>Profile</span>
               </DropdownMenuItem>
-              <DropdownMenuItem className="flex items-center">
+              <DropdownMenuItem className="flex items-center" onSelect={() => navigate("/profile")}>
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Settings</span>
               </DropdownMenuItem>
-              <DropdownMenuItem className="flex items-center text-destructive">
+              <DropdownMenuItem className="flex items-center text-destructive" onSelect={() => {
+                void signOut().then(() => navigate("/auth", { replace: true })).catch(() => undefined);
+              }}>
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>
               </DropdownMenuItem>

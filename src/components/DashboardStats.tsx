@@ -1,46 +1,25 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  TrendingUp, 
-  Users, 
-  MousePointer, 
-  BarChart3,
-  ArrowUpRight,
-  ArrowDownRight
-} from "lucide-react";
+import { FileText, Radio, Users } from "lucide-react";
 
-export const DashboardStats = () => {
+export const DashboardStats = ({ publishedContent, draftContent, leadCount }: { publishedContent: number; draftContent: number; leadCount: number }) => {
   const stats = [
     {
-      title: "Total Views",
-      value: "24,573",
-      change: "+12.5%",
-      changeType: "positive" as const,
-      icon: TrendingUp,
+      title: "Published content",
+      value: publishedContent,
+      icon: Radio,
       color: "text-primary"
     },
     {
-      title: "Leads Generated", 
-      value: "1,247",
-      change: "+8.2%",
-      changeType: "positive" as const,
+      title: "Drafts",
+      value: draftContent,
+      icon: FileText,
+      color: "text-warning"
+    },
+    {
+      title: "Patient leads",
+      value: leadCount,
       icon: Users,
       color: "text-success"
-    },
-    {
-      title: "Conversion Rate",
-      value: "5.8%",
-      change: "-2.1%",
-      changeType: "negative" as const,
-      icon: MousePointer,
-      color: "text-secondary"
-    },
-    {
-      title: "Active Content",
-      value: "18",
-      change: "+3",
-      changeType: "positive" as const,
-      icon: BarChart3,
-      color: "text-warning"
     }
   ];
 
@@ -55,20 +34,7 @@ export const DashboardStats = () => {
             <stat.icon className={`h-5 w-5 ${stat.color}`} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground mb-1">
-              {stat.value}
-            </div>
-            <div className="flex items-center text-xs">
-              {stat.changeType === "positive" ? (
-                <ArrowUpRight className="w-3 h-3 text-success mr-1" />
-              ) : (
-                <ArrowDownRight className="w-3 h-3 text-destructive mr-1" />
-              )}
-              <span className={stat.changeType === "positive" ? "text-success" : "text-destructive"}>
-                {stat.change}
-              </span>
-              <span className="text-muted-foreground ml-1">from last month</span>
-            </div>
+            <div className="text-2xl font-bold text-foreground mb-1">{stat.value.toLocaleString()}</div>
           </CardContent>
         </Card>
       ))}

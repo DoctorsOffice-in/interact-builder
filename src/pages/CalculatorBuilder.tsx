@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
 import { Button } from "@/components/ui/button";
@@ -8,9 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Save, Eye, Calculator, Plus, Trash2, GripVertical, Code2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { EmbedCodeDialog } from "@/components/EmbedCodeDialog";
+import { getContentItem, saveContentItem } from "@/lib/content-storage";
 
 interface CalcField {
   id: string;
@@ -165,7 +166,11 @@ const templates: Record<string, CalcTemplate> = {
 
 export const CalculatorBuilder = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTemplate, setActiveTemplate] = useState("BMI Calculator");
+  const [savedItemId, setSavedItemId] = useState<string | undefined>(undefined);
+  const [saving, setSaving] = useState(false);
+  const [loadingExisting, setLoadingExisting] = useState(Boolean(searchParams.get("id")));
   const [values, setValues] = useState<Record<string, number>>(() => {
     const initial: Record<string, number> = {};
     templates["BMI Calculator"].fields.forEach((f) => (initial[f.id] = f.defaultValue));
@@ -173,6 +178,40 @@ export const CalculatorBuilder = () => {
   });
   const [showPreview, setShowPreview] = useState(false);
   const [showEmbed, setShowEmbed] = useState(false);
+
+  useEffect(() => {
+    const id = searchParams.get("id");
+    if (!id) {
+      setLoadingExisting(false);
+      return;
+    }
+    let active = true;
+    setLoadingExisting(true);
+    void getContentItem(id).then((item) => {
+      if (!active) return;
+      if (!item || item.content_type !== "calculator") {
+        toast.error("That saved calculator could not be found.");
+        setLoadingExisting(false);
+        return;
+      }
+      const content = item.content as unknown as { templateName?: string; values?: Record<string, number> };
+      const name = content.templateName && templates[content.templateName] ? content.templateName : "BMI Calculator";
+      setActiveTemplate(name);
+      const nextValues: Record<string, number> = {};
+      templates[name].fields.forEach((field) => {
+        nextValues[field.id] = Number(content.values?.[field.id] ?? field.defaultValue);
+      });
+      setValues(nextValues);
+      setSavedItemId(item.id);
+      setLoadingExisting(false);
+    }).catch((error: unknown) => {
+      if (active) {
+        toast.error(error instanceof Error ? error.message : "Could not load this calculator.");
+        setLoadingExisting(false);
+      }
+    });
+    return () => { active = false; };
+  }, [searchParams]);
 
   const currentTemplate = templates[activeTemplate];
 
@@ -186,6 +225,25 @@ export const CalculatorBuilder = () => {
   };
 
   const result = currentTemplate.evaluate(values);
+
+  const saveCalculator = async () => {
+    setSaving(true);
+    try {
+      const item = await saveContentItem({
+        id: savedItemId,
+        contentType: "calculator",
+        title: activeTemplate,
+        content: { templateName: activeTemplate, values },
+      });
+      setSavedItemId(item.id);
+      if (!savedItemId) setSearchParams({ id: item.id }, { replace: true });
+      toast.success("Calculator saved to your content.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Calculator could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-background">
@@ -213,9 +271,9 @@ export const CalculatorBuilder = () => {
                 <Code2 className="w-4 h-4 mr-2" />
                 Embed
               </Button>
-              <Button className="bg-gradient-primary hover:opacity-90" onClick={() => toast.success("Calculator saved!")}>
+              <Button className="bg-gradient-primary hover:opacity-90" onClick={() => void saveCalculator()} disabled={saving || loadingExisting}>
                 <Save className="w-4 h-4 mr-2" />
-                Save Calculator
+                {saving ? "Saving…" : "Save Calculator"}
               </Button>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Header } from "@/components/Header";
 import { Sidebar } from "@/components/Sidebar";
 import { DashboardStats } from "@/components/DashboardStats";
@@ -7,91 +7,97 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Plus, Filter, Search, Sparkles } from "lucide-react";
+import { Plus, Search, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { deleteContentItem, listContentItems, saveContentItem, type SavedContentItem } from "@/lib/content-storage";
 
 const Index = () => {
   const navigate = useNavigate();
+  const { profile } = useAuth();
+  const [contentItems, setContentItems] = useState<SavedContentItem[]>([]);
+  const [leadCount, setLeadCount] = useState(0);
+  const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("All Templates");
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
 
-  const recentTemplates = [
-    {
-      title: "Patient Risk Assessment Quiz",
-      description: "Interactive quiz to assess patient risk factors for cardiovascular disease with personalized recommendations.",
-      category: "Assessment",
-      views: 1247,
-      conversions: 8.5,
-      status: "published" as const,
-      builderPath: "/quiz-builder"
-    },
-    {
-      title: "BMI Calculator", 
-      description: "Professional BMI calculator with health recommendations and lifestyle tips for patients.",
-      category: "Calculator",
-      views: 2156,
-      conversions: 12.3,
-      status: "published" as const,
-      builderPath: "/calculator-builder"
-    },
-    {
-      title: "Medication Dosage Calculator",
-      description: "Calculate proper medication dosages based on patient weight, age, and condition severity.",
-      category: "Calculator", 
-      views: 987,
-      conversions: 15.7,
-      status: "draft" as const,
-      builderPath: "/calculator-builder"
-    },
-    {
-      title: "Symptom Checker Bot",
-      description: "AI-powered chatbot to help patients identify potential conditions based on their symptoms.",
-      category: "Chatbot",
-      views: 3421,
-      conversions: 6.8,
-      status: "published" as const,
-      builderPath: "/chatbot-builder"
-    },
-    {
-      title: "Patient Satisfaction Survey",
-      description: "Gather feedback from patients about their experience at your practice.",
-      category: "Assessment",
-      views: 890,
-      conversions: 22.1,
-      status: "published" as const,
-      builderPath: "/quiz-builder"
-    },
-    {
-      title: "Appointment Pre-screening Quiz",
-      description: "Pre-screen patients before their appointment to optimize consultation time.",
-      category: "Assessment",
-      views: 654,
-      conversions: 18.3,
-      status: "draft" as const,
-      builderPath: "/quiz-builder"
+  const refreshDashboard = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [items, leads] = await Promise.all([
+        listContentItems(),
+        supabase.from("leads").select("id", { count: "exact", head: true }),
+      ]);
+      setContentItems(items);
+      setLeadCount(leads.count ?? 0);
+      if (leads.error) throw leads.error;
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Dashboard content could not be loaded.");
+    } finally {
+      setLoading(false);
     }
-  ];
+  }, []);
+
+  useEffect(() => { void refreshDashboard(); }, [refreshDashboard]);
+
+  const builderPath = (type: string) => ({ quiz: "/quiz-builder", calculator: "/calculator-builder", chatbot: "/chatbot-builder", "spin-wheel": "/spin-wheel-builder" }[type] || "/");
+  const categoryFor = (type: string) => ({ quiz: "Quiz", calculator: "Calculator", chatbot: "Chatbot", "spin-wheel": "Spin Wheel" }[type] || "Content");
+  const descriptionFor = (item: SavedContentItem) => {
+    const content = item.content as Record<string, unknown>;
+    const settings = content.settings && typeof content.settings === "object" ? content.settings as Record<string, unknown> : null;
+    const description = settings?.description ?? content.description;
+    return typeof description === "string" && description.trim() ? description : "Saved interactive content for your practice.";
+  };
 
   const templateCategories = [
-    { name: "All Templates", count: recentTemplates.length },
-    { name: "Calculators", count: recentTemplates.filter(t => t.category === "Calculator").length },
-    { name: "Assessments", count: recentTemplates.filter(t => t.category === "Assessment").length },
-    { name: "Chatbots", count: recentTemplates.filter(t => t.category === "Chatbot").length },
+    { name: "All Content", count: contentItems.length },
+    { name: "Quizzes", count: contentItems.filter((item) => item.content_type === "quiz").length },
+    { name: "Calculators", count: contentItems.filter((item) => item.content_type === "calculator").length },
+    { name: "Chatbots", count: contentItems.filter((item) => item.content_type === "chatbot").length },
+    { name: "Spin Wheels", count: contentItems.filter((item) => item.content_type === "spin-wheel").length },
   ];
 
   const categoryMap: Record<string, string> = {
+    "Quizzes": "quiz",
     "Calculators": "Calculator",
-    "Assessments": "Assessment",
-    "Chatbots": "Chatbot",
+    "Chatbots": "chatbot",
+    "Spin Wheels": "spin-wheel",
   };
 
-  const filteredTemplates = recentTemplates.filter(t => {
-    const matchCategory = activeCategory === "All Templates" || t.category === categoryMap[activeCategory];
-    const matchSearch = !searchQuery || t.title.toLowerCase().includes(searchQuery.toLowerCase()) || t.description.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredTemplates = contentItems.filter((item) => {
+    const matchCategory = activeCategory === "All Content" || item.content_type === categoryMap[activeCategory]?.toLowerCase();
+    const description = descriptionFor(item);
+    const matchSearch = !searchQuery || item.title.toLowerCase().includes(searchQuery.toLowerCase()) || description.toLowerCase().includes(searchQuery.toLowerCase());
     return matchCategory && matchSearch;
   });
+
+  const duplicateItem = async (item: SavedContentItem) => {
+    try {
+      await saveContentItem({
+        contentType: item.content_type as "quiz" | "calculator" | "chatbot" | "spin-wheel",
+        title: `${item.title} copy`,
+        content: item.content as Record<string, unknown>,
+      });
+      toast.success("A draft copy was created.");
+      await refreshDashboard();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "This content could not be duplicated.");
+    }
+  };
+
+  const removeItem = async (item: SavedContentItem) => {
+    if (!window.confirm(`Delete “${item.title}”? This cannot be undone.`)) return;
+    try {
+      await deleteContentItem(item.id);
+      toast.success("Content deleted.");
+      await refreshDashboard();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Content could not be deleted.");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-background">
@@ -105,7 +111,7 @@ const Index = () => {
             <div className="flex items-center justify-between mb-2">
               <div>
                 <h1 className="text-3xl font-bold text-foreground">
-                  Welcome back, Dr. Smith
+                  Welcome back{profile?.display_name ? `, ${profile.display_name}` : ""}
                 </h1>
                 <p className="text-muted-foreground mt-1">
                   Here's what's happening with your interactive content today.
@@ -121,14 +127,14 @@ const Index = () => {
             </div>
           </div>
 
-          <DashboardStats />
+          <DashboardStats publishedContent={contentItems.filter((item) => item.is_published).length} draftContent={contentItems.filter((item) => !item.is_published).length} leadCount={leadCount} />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
               <Card className="bg-gradient-card border-border">
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-xl font-semibold">Recent Content</CardTitle>
+                    <CardTitle className="text-xl font-semibold">Your content</CardTitle>
                     <div className="flex items-center gap-2">
                       <Button variant="outline" size="sm" onClick={() => setShowSearch(!showSearch)}>
                         <Search className="w-4 h-4 mr-2" />
@@ -166,21 +172,27 @@ const Index = () => {
                 </CardHeader>
                 
                 <CardContent className="space-y-4">
-                  {filteredTemplates.length > 0 ? filteredTemplates.map((template, index) => (
+                  {loading ? <div className="py-10 text-center text-muted-foreground">Loading your content…</div>
+                    : filteredTemplates.length > 0 ? filteredTemplates.map((template) => (
                     <TemplateCard 
-                      key={index} 
+                      key={template.id}
                       title={template.title}
-                      description={template.description}
-                      category={template.category}
-                      views={template.views}
-                      conversions={template.conversions}
-                      status={template.status}
-                      onEdit={() => navigate(template.builderPath)}
-                      onPreview={() => toast.info(`Previewing ${template.title}...`)}
+                      description={descriptionFor(template)}
+                      category={categoryFor(template.content_type)}
+                      updatedAt={template.updated_at}
+                      status={template.is_published ? "published" : "draft"}
+                      onEdit={() => navigate(`${builderPath(template.content_type)}?id=${template.id}`)}
+                      onPreview={() => {
+                        if (template.content_type === "quiz" && template.is_published) navigate(`/p/${template.slug}`);
+                        else navigate(`${builderPath(template.content_type)}?id=${template.id}`);
+                      }}
+                      onDuplicate={() => void duplicateItem(template)}
+                      onDelete={() => void removeItem(template)}
+                      onViewLive={template.content_type === "quiz" && template.is_published ? () => navigate(`/p/${template.slug}`) : undefined}
                     />
                   )) : (
                     <div className="text-center py-8 text-muted-foreground">
-                      No templates match your search.
+                      {contentItems.length ? "No content matches your search." : "Your saved quizzes, calculators, chatbots, and wheels will appear here."}
                     </div>
                   )}
                 </CardContent>
