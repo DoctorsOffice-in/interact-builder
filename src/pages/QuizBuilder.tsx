@@ -10,14 +10,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Plus, Save, Eye, ArrowLeft, Settings, Palette, Trophy, GripVertical, Code2
+  Plus, Save, Eye, ArrowLeft, Settings, Palette, Trophy, GripVertical, Code2, Sparkles
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { EmbedCodeDialog } from "@/components/EmbedCodeDialog";
 import { getContentItem, saveContentItem } from "@/lib/content-storage";
+import { supabase } from "@/integrations/supabase/client";
 import {
   DndContext,
   closestCenter,
@@ -66,9 +75,23 @@ interface QuizSettings {
   title: string;
   description: string;
   category: string;
+  specialty?: string;
+  campaignGoal?: string;
   coverImage?: string;
   scoringType: "points" | "category";
 }
+
+interface QuizDraftResponse {
+  title: string;
+  description: string;
+  questions: Array<{
+    question: string;
+    options: Array<{ text: string; points: 0 | 1 | 2 }>;
+  }>;
+  outcomes: Array<{ title: string; description: string }>;
+}
+
+const nonDiagnosticNotice = "For general information only; this quiz does not provide a diagnosis or medical advice. Contact your clinic for personalized guidance.";
 
 export const QuizBuilder = () => {
   const navigate = useNavigate();
@@ -76,6 +99,10 @@ export const QuizBuilder = () => {
   const [activeTab, setActiveTab] = useState<"questions" | "results" | "design" | "settings">("questions");
   const [showPreview, setShowPreview] = useState(false);
   const [showEmbed, setShowEmbed] = useState(false);
+  const [showAiDialog, setShowAiDialog] = useState(false);
+  const [draftingWithAi, setDraftingWithAi] = useState(false);
+  const [specialty, setSpecialty] = useState("");
+  const [campaignGoal, setCampaignGoal] = useState("");
   const [savedItemId, setSavedItemId] = useState<string | undefined>(undefined);
   const [savedSlug, setSavedSlug] = useState<string | undefined>(undefined);
   const [isPublished, setIsPublished] = useState(false);
@@ -130,6 +157,8 @@ export const QuizBuilder = () => {
       }
       const content = item.content as unknown as { settings?: Partial<QuizSettings>; questions?: QuizQuestion[]; results?: QuizResult[] };
       setQuizSettings((current) => ({ ...current, ...content.settings, title: content.settings?.title || item.title }));
+      setSpecialty(content.settings?.specialty ?? "");
+      setCampaignGoal(content.settings?.campaignGoal ?? "");
       setQuestions(content.questions ?? []);
       setResults(content.results ?? []);
       setSavedItemId(item.id);
@@ -164,6 +193,80 @@ export const QuizBuilder = () => {
       toast.error(error instanceof Error ? error.message : "Quiz could not be saved.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const generateQuizDraft = async () => {
+    const cleanSpecialty = specialty.trim();
+    const cleanCampaignGoal = campaignGoal.trim();
+    if (cleanSpecialty.length < 2 || cleanCampaignGoal.length < 10) {
+      toast.error("Enter a clinic specialty and a campaign goal to continue.");
+      return;
+    }
+
+    setDraftingWithAi(true);
+    try {
+      const { data, error } = await supabase.functions.invoke<{ draft: QuizDraftResponse }>("draft-quiz", {
+        body: { specialty: cleanSpecialty, campaignGoal: cleanCampaignGoal },
+      });
+      if (error) {
+        const context = error.context;
+        if (context instanceof Response) {
+          const payload: unknown = await context.clone().json().catch(() => null);
+          if (typeof payload === "object" && payload !== null && "error" in payload && typeof payload.error === "string") {
+            throw new Error(payload.error);
+          }
+        }
+        throw new Error("The request did not finish clearly. Check the editor for a draft before trying again.");
+      }
+      if (!data?.draft) throw new Error("The quiz draft could not be read. Please try again.");
+
+      const draft = data.draft;
+      const nextQuestions: QuizQuestion[] = draft.questions.map((question, index) => ({
+        id: crypto.randomUUID(),
+        question: question.question,
+        type: "single-choice",
+        options: question.options.map((option) => option.text),
+        optionSettings: question.options.map((option) => ({
+          text: option.text,
+          points: option.points,
+          resultCategory: "",
+        })),
+        required: true,
+      }));
+      const resultRanges = [
+        { minScore: 0, maxScore: 3 },
+        { minScore: 4, maxScore: 7 },
+        { minScore: 8, maxScore: 10 },
+      ];
+      const nextResults: QuizResult[] = draft.outcomes.map((outcome, index) => ({
+        id: crypto.randomUUID(),
+        title: outcome.title,
+        description: `${outcome.description}\n\n${nonDiagnosticNotice}`,
+        minScore: resultRanges[index]?.minScore ?? 0,
+        maxScore: resultRanges[index]?.maxScore ?? 10,
+        redirectUrl: "",
+        couponCode: "",
+      }));
+
+      setQuizSettings({
+        title: draft.title,
+        description: `${draft.description}\n\n${nonDiagnosticNotice}`,
+        category: cleanSpecialty,
+        specialty: cleanSpecialty,
+        campaignGoal: cleanCampaignGoal,
+        scoringType: "points",
+      });
+      setQuestions(nextQuestions);
+      setResults(nextResults);
+      setActiveTab("questions");
+      setShowPreview(false);
+      setShowAiDialog(false);
+      toast.success("Draft added to the quiz editor. Review the questions and outcomes before publishing.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "The quiz draft could not be created. Please try again.");
+    } finally {
+      setDraftingWithAi(false);
     }
   };
 
@@ -340,6 +443,53 @@ export const QuizBuilder = () => {
             contentId={savedSlug}
           />
 
+          <Dialog open={showAiDialog} onOpenChange={(open) => { if (!draftingWithAi) setShowAiDialog(open); }}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Draft a patient quiz</DialogTitle>
+                <DialogDescription>
+                  The draft is educational, not diagnostic, and stays editable until you save it.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="quiz-clinic-specialty">Clinic specialty</Label>
+                  <Input
+                    id="quiz-clinic-specialty"
+                    value={specialty}
+                    onChange={(event) => setSpecialty(event.target.value)}
+                    placeholder="For example, cardiology"
+                    maxLength={100}
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="quiz-campaign-goal">Campaign goal</Label>
+                  <Textarea
+                    id="quiz-campaign-goal"
+                    value={campaignGoal}
+                    onChange={(event) => setCampaignGoal(event.target.value)}
+                    placeholder="For example, introduce our heart-health education program and invite interested patients to learn more."
+                    maxLength={400}
+                    rows={4}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Don’t include patient details. Review all generated copy before sharing it.
+                </p>
+              </div>
+              <DialogFooter>
+                <Button
+                  onClick={() => void generateQuizDraft()}
+                  disabled={draftingWithAi || specialty.trim().length < 2 || campaignGoal.trim().length < 10}
+                >
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  {draftingWithAi ? "Drafting…" : "Create quiz draft"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
           {showPreview ? (
             <QuizPreview
               title={quizSettings.title}
@@ -358,6 +508,13 @@ export const QuizBuilder = () => {
                     <CardTitle className="text-lg">Builder Tools</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    <div className="space-y-2 border-b border-border pb-4">
+                      <Button className="w-full" onClick={() => setShowAiDialog(true)}>
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        Draft with AI
+                      </Button>
+                      <p className="text-center text-xs text-muted-foreground">Start with your clinic specialty and campaign goal.</p>
+                    </div>
                     <div className="flex flex-col gap-2">
                       {[
                         { id: "questions", label: "Questions", icon: Plus },
