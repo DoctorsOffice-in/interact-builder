@@ -5,3 +5,4 @@
 - [ ] Build the public quiz experience with private lead capture and an owner inbox.
 - [ ] Verify publishing, public quiz completion, and owner-only lead access end to end.
 - [ ] Add verified-domain owner email alerts when an owner address and email setup are available.
+- [ ] Add AI-assisted, non-diagnostic quiz drafting from clinic specialty and campaign goal.
